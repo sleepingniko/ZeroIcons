@@ -41,7 +41,7 @@ int main(int argc, char** argv)
 	HMODULE* phModules = 0;
 	DWORD BytesReturned = 0;
 
-	CHAR pBaseName[MAX_PATH];
+	CHAR pBaseName[MAX_PATH] = { 0 };
 
 	HMODULE hModule = 0;
 	PVOID pTargetAddress = 0;
