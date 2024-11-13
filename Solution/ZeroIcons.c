@@ -28,7 +28,6 @@ unsigned char g_pCodePatch[] =
 
 // Credits to...
 // Absolute - The original 2.2 Unlock All/Icon Hack (which I reverse engineered; I could've done it my own way, but the code would've looked HIDEOUS).
-// Meikyu - Creating the ship that is used as this program's icon.
 int main(int argc, char** argv)
 {
 	UNREFERENCED_PARAMETER(argc);
