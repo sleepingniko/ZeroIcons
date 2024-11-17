@@ -116,6 +116,8 @@ int main(int argc, char** argv)
 	if (!K32EnumProcessModules(hProcess, phModules, BytesReturned, &BytesReturned))
 	{
 		printf("[-] Failed to enumerate process modules. Error: %d (0x%x)\n", GetLastError(), GetLastError());
+		getchar();
+		return 1
 	}
 
 	// Iterate over the module array to find the correct base address.
