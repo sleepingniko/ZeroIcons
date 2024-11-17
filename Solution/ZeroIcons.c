@@ -8,9 +8,9 @@
 // This is extremely dangerous as it can prevent GD from starting entirely.
 // So... if I add this, I have to be very careful and very precise.
 
-// This is some VERY simple x86 assembly code that will force the icon unlocked check to succeed.
-// I'm sure there's another way you can achieve this result (e.g. an injection-based hack abusing hooks), but this is my way of doing it.
-unsigned char g_pCodePatch[] =
+// This is some VERY simple x86 assembly code that will force both the icon and color unlocked check to succeed.
+// There's other ways of doing this, but this obviously the easiest.
+CHAR g_pIconAndColorPatch[] =
 {
 	0xB0, 0x01,	// mov al, 1
 	0x90,		// nop
@@ -20,14 +20,33 @@ unsigned char g_pCodePatch[] =
 
 // Found via reverse engineering GeometryDash.exe.
 // For future updates, patch diff'ing will make updating this hack extremely fast.
-#define ICON_HACK_PATCH_OFFSET 0x26F905
+// I would use signatures, but uh... I don't feel like it.
+// This offset is for icons.
+#define ICONS_OFFSET 0x26F905
+
+// This offset is for icon colors.
+#define COLORS_OFFSET 0x89DCD
+
+// This offset is for icon glow.
+// Unfortunately, I DON'T HAVE A DAMN CLUE WHERE IT IS!!!!
+#define GLOW_OFFSET 0
 
 // The expected bytes at the offset above.
 // If the bytes do not match, then bail out; it's likely that GD updated.
-#define ICON_HACK_ORIGINAL_BYTES 0x75C084FFF09BD6E8
+#define ICONS_ORIGINAL_BYTES 0x75C084FFF09BD6E8
+#define COLORS_ORIGINAL_BYTES 0x74C084000EFAEEE8
+#define GLOW_ORIGINAL_BYTES 0
+
+// The patched bytes for the offsets above.
+// If the bytes match, then that means the game is already patched and we can skip the patching process for that address.
+#define ICONS_PATCHED_BYTES 0x75C08490909001B0
+#define COLORS_PATCHED_BYTES 0x74C08490909001B0
+#define GLOW_PATCHED_BYTES 0
+
+void WritePatch(HANDLE hProcess, PVOID pTargetAddress, ULONG_PTR ExpectedBytes, ULONG_PTR PatchedBytes, CHAR* pPatchCode, SIZE_T PatchLength);
 
 // Credits to...
-// Absolute - The original 2.2 Unlock All/Icon Hack (which I reverse engineered; I could've done it my own way, but the code would've looked HIDEOUS).
+// Absolute - The original 2.2 Unlock All/Icon Hack (which I reverse engineered; I could've done it my own way, but the code would've looked worse than it does now).
 int main(int argc, char** argv)
 {
 	UNREFERENCED_PARAMETER(argc);
@@ -44,8 +63,9 @@ int main(int argc, char** argv)
 	CHAR pBaseName[MAX_PATH] = { 0 };
 
 	HMODULE hModule = 0;
-	PVOID pTargetAddress = 0;
-	SIZE_T ReadMemory = 0;
+
+	PVOID pIconsAddress = 0;
+	PVOID pColorsAddress = 0;
 
 	// I mean, come on, I HAVE to do this.
 	SetConsoleTitleA("ZeroIcons Icon Hack");
@@ -127,41 +147,59 @@ int main(int argc, char** argv)
 	}
 	printf("[+] Base Address: 0x%p\n", hModule);
 
-	// This is genuinely disgusting, but C might be more disgusting at times.
+	// This is genuinely disgusting, but does it look like I care?
 	// hModule is the base address of GeometryDash.exe, and we add the offset to overwrite to it.
 	// Typical game cheat stuff... except the fact that game cheats usually use signatures instead of hard-coded offsets.
-	pTargetAddress = (PCHAR)(hModule)+ICON_HACK_PATCH_OFFSET;
-	printf("[+] Overwrite Address: 0x%p\n", pTargetAddress);
+	pIconsAddress = (PCHAR)(hModule)+ICONS_OFFSET;
+	pColorsAddress = (PCHAR)(hModule)+COLORS_OFFSET;
+	printf("[+] Icon Unlock Address: 0x%p\n[+] Color Unlock Address: 0x%p\n", pIconsAddress, pColorsAddress);
+
+	// Patch the game!
+	WritePatch(hProcess, pIconsAddress, ICONS_ORIGINAL_BYTES, ICONS_PATCHED_BYTES, g_pIconAndColorPatch, sizeof(g_pIconAndColorPatch));
+	WritePatch(hProcess, pColorsAddress, COLORS_ORIGINAL_BYTES, COLORS_PATCHED_BYTES, g_pIconAndColorPatch, sizeof(g_pIconAndColorPatch));
+
+	// ALL. DONE.
+	printf("[+] Done! You may now close this window.\n");
+	getchar();
+	return 0;
+}
+
+void WritePatch(HANDLE hProcess, PVOID pTargetAddress, ULONG_PTR ExpectedBytes, ULONG_PTR PatchedBytes, CHAR* pPatchCode, SIZE_T PatchLength)
+{
+	ULONG_PTR Bytes = 0;
 
 	// Read the process' memory for a future check.
-	if (!ReadProcessMemory(hProcess, pTargetAddress, &ReadMemory, sizeof(ReadMemory), 0))
+	if (!ReadProcessMemory(hProcess, pTargetAddress, &Bytes, sizeof(Bytes), 0))
 	{
 		printf("[-] Failed to read process memory. Error: %d (0x%x)\n", GetLastError(), GetLastError());
-		getchar();
-		return 1;
+		return;
 	}
+
+	// Uncomment the line below to get the 8 bytes located at the target address.
+	// Useful for finding the expected bytes and the patched bytes.
+	// printf("Address: 0x%p, Bytes: 0x%p\n", pTargetAddress, (PVOID)Bytes);
+
+	// Before we check the expected bytes, we should check to see if the game was already patched.
+	if (Bytes == PatchedBytes)
+	{
+		printf("[+] Looks like this offset is already patched! Skipping...\n");
+		return;
+	}
+
 	// That "future check" is here.
 	// Are the bytes equal to known good bytes? If not, then bail out!
 	// If this fails, there's a high likelihood that Geometry Dash updated.
-	if (ReadMemory != ICON_HACK_ORIGINAL_BYTES)
+	if (Bytes != ExpectedBytes)
 	{
-		printf("[-] Failed to find the expected bytes. Did Geometry Dash update? Found Bytes: 0x%p\n", (PVOID)ReadMemory);
-		getchar();
-		return 1;
+		printf("[-] Failed to find the expected bytes. Did Geometry Dash update? Found Bytes: 0x%p\n", (PVOID)Bytes);
+		return;
 	}
 
-	// And finally, we write our beautiful 5 bytes worth of assembly instructions.
-	// All that work... just for this.
-	// What the fuck.
-	if (!WriteProcessMemory(hProcess, pTargetAddress, g_pCodePatch, sizeof(g_pCodePatch), 0))
+	// And finally, we patch out the code so that the checks always succeed!
+	if (!WriteProcessMemory(hProcess, pTargetAddress, pPatchCode, PatchLength, 0))
 	{
 		printf("[-] Failed to write process memory. Error: %d (0x%x)\n", GetLastError(), GetLastError());
-		getchar();
-		return 1;
+		return;
 	}
-
-	// ALL. DONE.
-	printf("[+] Patched! You may now close this window.\n");
-	getchar();
-	return 0;
+	printf("[+] Successfully patched address 0x%p!\n", pTargetAddress);
 }
