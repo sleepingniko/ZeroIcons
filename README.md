@@ -4,7 +4,8 @@
  
  Also, bare in mind that icons will still appear as locked. If the patch was successful, you should be able to select any icons you wish regardless of whether or not you have them unlocked.
  
- Lastly, it is almost (if not completely) **impossible for me to prove that the compiled executable is safe to run**. **If you do not trust the file, do not run it**!
+ Lastly, it is almost (if not completely) **impossible for me to prove that the compiled executable is safe to run**.
+ ### **If you do not trust the file, do not run it**!
  Instead, consider compiling it from the source code. All you need is Visual Studio w/ Desktop development with C++ installed to do so.
 
 # ZeroIcons
