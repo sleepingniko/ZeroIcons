@@ -9,8 +9,17 @@
 // So... if I add this, I have to be very careful and very precise.
 
 // This is some VERY simple x86 assembly code that will force both the icon and color unlocked check to succeed.
-// There's other ways of doing this, but this obviously the easiest.
-CHAR g_pIconAndColorPatch[] =
+// There's other ways of doing this, but this is the easiest in my opinion.
+CHAR g_pIconPatch[] =
+{
+	0xB0, 0x01,	// mov al, 1
+	0x90,		// nop
+	0x90,		// nop
+	0x90		// nop
+};
+
+// The same as above, but here incase I need to change it up.
+CHAR g_pColorPatch[] =
 {
 	0xB0, 0x01,	// mov al, 1
 	0x90,		// nop
@@ -149,7 +158,6 @@ int main(int argc, char** argv)
 	}
 	printf("[+] Base Address: 0x%p\n", hModule);
 
-	// This is genuinely disgusting, but does it look like I care?
 	// hModule is the base address of GeometryDash.exe, and we add the offset to overwrite to it.
 	// Typical game cheat stuff... except the fact that game cheats usually use signatures instead of hard-coded offsets.
 	pIconsAddress = (PCHAR)(hModule)+ICONS_OFFSET;
@@ -157,8 +165,8 @@ int main(int argc, char** argv)
 	printf("[+] Icon Unlock Address: 0x%p\n[+] Color Unlock Address: 0x%p\n", pIconsAddress, pColorsAddress);
 
 	// Patch the game!
-	WritePatch(hProcess, pIconsAddress, ICONS_ORIGINAL_BYTES, ICONS_PATCHED_BYTES, g_pIconAndColorPatch, sizeof(g_pIconAndColorPatch));
-	WritePatch(hProcess, pColorsAddress, COLORS_ORIGINAL_BYTES, COLORS_PATCHED_BYTES, g_pIconAndColorPatch, sizeof(g_pIconAndColorPatch));
+	WritePatch(hProcess, pIconsAddress, ICONS_ORIGINAL_BYTES, ICONS_PATCHED_BYTES, g_pIconPatch, sizeof(g_pIconPatch));
+	WritePatch(hProcess, pColorsAddress, COLORS_ORIGINAL_BYTES, COLORS_PATCHED_BYTES, g_pColorPatch, sizeof(g_pColorPatch));
 
 	// ALL. DONE.
 	printf("[+] Done! You may now close this window.\n");
