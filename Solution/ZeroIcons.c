@@ -126,7 +126,7 @@ int main(int argc, char** argv)
 	{
 		printf("[-] Failed to enumerate process modules. Error: %d (0x%x)\n", GetLastError(), GetLastError());
 		getchar();
-		return 1
+		return 1;
 	}
 
 	// Iterate over the module array to find the correct base address.
